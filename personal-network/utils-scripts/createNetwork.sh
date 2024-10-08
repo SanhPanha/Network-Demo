@@ -5,9 +5,19 @@ set -e
 set -o pipefail 
 function init(){
     echo "Adding the bin of hyperledger fabric to the PATH..."
+
+    # previous path
+    # export PATH=$PATH:/home/keo/Documents/blockchain_related/simple-blockchain-demo/personal-network/bin
+
+    # my path
     export PATH=$PATH:/home/darkfighter/Documents/test-network/simple-blockchain-demo/personal-network/bin
+
     # we should use this 
     # export .. $(pwd)/config 
+
+    # Previous path
+    # export FABRIC_CFG_PATH=/home/keo/Documents/blockchain_related/simple-blockchain-demo/personal-network/config
+
     export FABRIC_CFG_PATH=/home/darkfighter/Documents/test-network/simple-blockchain-demo/personal-network/config
 }
 
@@ -100,6 +110,7 @@ function setOrgEnv(){
 
 
 }
+
 function createChannel(){
     upNetwork
     echo "Running stuff on the <<Org1>> via the cli container..."
@@ -236,9 +247,27 @@ function createChannel(){
             --channelID channeldemo \
             --name becc
 
+
         # init 
         # queryAllProducts here ! 
-        
+
+        # Call invokeChaincode function to automate the chaincode invoke and query steps
+        invokeChaincode() {
+            echo "Exporting environment variables..."
+            export ORDERER_CA=/opt/gopath/fabric-samples/personal-network/crypto-config/ordererOrganizations/personal-network.com/orderers/orderer.personal-network.com/msp/tlscacerts/tlsca.personal-network.com-cert.pem
+            export PEER_ORG1_TLSROOTCERTFILES=/opt/gopath/fabric-samples/personal-network/crypto-config/peerOrganizations/org1.personal-network.com/peers/peer0.org1.personal-network.com/tls/ca.crt
+            export PEER_ORG2_TLSROOTCERTFILES=/opt/gopath/fabric-samples/personal-network/crypto-config/peerOrganizations/org2.personal-network.com/peers/peer0.org2.personal-network.com/tls/ca.crt
+
+            echo "Invoking the chaincode with initLedger..."
+            peer chaincode invoke -o orderer.personal-network.com:7050 --tls true --cafile $ORDERER_CA -C channeldemo -n becc --peerAddresses peer0.org1.personal-network.com:7051 --tlsRootCertFiles $PEER_ORG1_TLSROOTCERTFILES --peerAddresses peer0.org2.personal-network.com:7051 --tlsRootCertFiles $PEER_ORG2_TLSROOTCERTFILES --isInit -c '"'"'{"function":"initLedger","Args":[]}'"'"'
+
+            echo "Querying all products..." | jq .
+            peer chaincode query -C channeldemo -n becc -c '"'"'{"Args":["queryAllProducts"]}'"'"' | jq .
+        }
+
+        # Call invokeChaincode after committing the chaincode
+        invokeChaincode
+
     '
     }
 
